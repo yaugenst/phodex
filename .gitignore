@@ -1,0 +1,14 @@
+.venv
+.DS_Store
+.vscode
+.idea
+__pycache__
+
+phodex.egg-info
+phodex.dist-info
+build/
+dist/
+.eggs
+
+venv/
+.ipynb_checkpoints
