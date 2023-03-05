@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 
-def legend_grid(
+def add_legend_grid(
     handles: list[plt.Line2D],
     labels: list[str],
     row_names: list[str],
