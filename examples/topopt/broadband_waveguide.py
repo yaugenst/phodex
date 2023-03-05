@@ -5,36 +5,50 @@ import matplotlib.pyplot as plt
 import meep as mp
 import nlopt
 from cycler import cycler
+from loguru import logger
 from matplotlib import gridspec
 
 from phodex.io import filter_stdout
+from phodex.layout.meep import MultiportDevice2D, Port
 from phodex.optim.nlopt import get_epigraph_formulation
+from phodex.plotting import add_legend_grid
 from phodex.topopt.parametrizations import sigmoid_parametrization
-from phodex.topopt.problems import FilterProblem
 
 
 def main():
     sigma = 1
     beta = 64
+    wvg_width = 0.5
+    resolution = 20
     wavelengths = np.linspace(1.5, 1.6, 5)
-    p = FilterProblem(
-        resolution=20,
-        wavelengths=wavelengths,
-        design_region_xy=(4, 2),
-        use_effective_index=True,
-    )
-    input_flux, _ = p.normalization
+    design_region = [4, 2]
 
-    def tran(_, s12):
+    ports = [Port(wvg_width, "-x", source=True), Port(wvg_width, "+x")]
+
+    p = MultiportDevice2D(
+        ports=ports,
+        n_core=3.4865,
+        n_clad=1.4440,
+        wvg_height=0.22,
+        wavelengths=wavelengths,
+        resolution=resolution,
+        design_region_extent=design_region,
+        monitor_size_fac=6,
+    )
+
+    input_flux, _ = p.normalizations[0]
+
+    def tran(s11, s12):
         p = np.abs(s12) ** 2 / input_flux
         return 1 - p
 
-    def refl(s11, _):
+    def refl(s11, s12):
         p = np.abs(s11) ** 2 / input_flux
         return p
 
     obj_funs = [tran, refl]
     mpa_opt = p.get_optimization_problem(obj_funs)
+
     parametrization = sigmoid_parametrization((p.nx, p.ny), sigma, beta)
     state_dict = {"obj_hist": [], "epivar_hist": [], "cur_iter": 0}
 
@@ -67,50 +81,11 @@ def main():
         ax00.set_yscale("log")
 
         # legend
-        ph = [plt.plot([], marker="", ls="")[0]] * (
-            len(p.wavelengths) + len(obj_funs) + 1
-        )
-        pl = (
-            ["λ (nm)"]
-            + [f"{int(1000 * w)}" for w in p.wavelengths]
-            + [f.__name__ for f in obj_funs]
-        )
+        row_names = [f"{int(1000 * w)} nm" for w in p.wavelengths]
+        col_names = [f.__name__ for f in obj_funs]
+        legend_ax = fig.add_subplot(gs[1, :])
         handles, labels = ax00.get_legend_handles_labels()
-        handles = (
-            [ph[-2]]
-            + handles[0 :: len(obj_funs)]
-            + [ph[-1]]
-            + handles[1 :: len(obj_funs)]
-        )
-        labels = (
-            [pl[-2]]
-            + labels[0 :: len(obj_funs)]
-            + [pl[-1]]
-            + labels[1 :: len(obj_funs)]
-        )
-        axl = fig.add_subplot(gs[1, :])
-        lgd = axl.legend(
-            ph[: len(p.wavelengths) + 1] + handles,
-            pl[: len(p.wavelengths) + 1] + labels,
-            loc="center",
-            ncol=len(obj_funs) + 1,
-            frameon=False,
-            columnspacing=0,
-        )
-        for line in lgd.get_lines():
-            line.set_linewidth(2.0)
-        for text in lgd.get_texts():
-            x, y = text.get_position()
-            tx = text.get_text()
-            if tx in [f.__name__ for f in obj_funs]:
-                text.set_fontweight("bold")
-                text.set_position([x - 40, y])
-            elif tx == "λ (nm)":
-                text.set_fontweight("bold")
-                text.set_position([x - 35, y])
-            elif tx.isnumeric():
-                text.set_position([x - 30, y])
-        axl.axis("off")
+        add_legend_grid(handles, labels, row_names, col_names, legend_ax)
 
         # epigraph variable
         ax01 = ax00.twinx()
@@ -131,14 +106,14 @@ def main():
         )
         plt.close()
 
-        print(
+        logger.info(
             f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, objective (dB): '
             "[" + ", ".join(f"{10*np.log10(ff):6.2f}" for ff in f0) + "]",
             flush=True,
         )
 
     nlopt_obj, epi_cst = get_epigraph_formulation(mpa_opt, parametrization, callback)
-    epi_tol = np.full(len(obj_funs) * p.nfreq, 1e-3)
+    epi_tol = np.full(len(obj_funs) * p.nfreq, 1e-4)
 
     n = p.nx * p.ny + 1
     x0 = np.full(n, 0.5)
@@ -158,7 +133,7 @@ def main():
     opt.set_param("dual_ftol_rel", 1e-7)
     opt.set_maxeval(100)
 
-    with filter_stdout("iteration"):
+    with filter_stdout("phodex"):
         x0[:] = opt.optimize(x0)
 
 
