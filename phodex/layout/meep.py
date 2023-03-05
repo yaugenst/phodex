@@ -62,45 +62,51 @@ class Port:
 
 
 @dataclass(frozen=True)
-class MultiportDevice:
+class MultiportDevice2D:
+    ports: Iterable[Port]
+
     n_core: float = 3.4865
     n_clad: float = 1.4440
-    wvg_width: float = 0.5
     wvg_height: float | None = None
-    ports: Iterable[Port] = (Port(wvg_width, "-x", source=True), Port(wvg_width, "+x"))
     monitor_size_fac: float = 2.0
     monitor_offset: float = 0.2
-    use_effective_index: bool = False
 
-    resolution: int = 20
+    resolution: int = 30
     design_resolution: int = 2 * resolution
     wavelengths: Iterable[float] = (1.55,)
     mode: int = 1
-    dpml: float = 0.5
+    dpml: float = 1.0
     df: float = 0.2
     stop_tol: float = 1e-6
     polarization: Literal["te", "tm"] = "tm"
     mirror_axis: Literal["x", "y"] | None = None
     sim_kwargs: dict = field(default_factory=dict)
 
-    design_region_extent: tuple[float, float] = (4.0, 2.0)
+    design_region_extent: tuple[float, float] = (3.0, 3.0)
     buffer_xy: tuple[float, float] = (1.0, 1.0)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "wavelengths", np.array(self.wavelengths, dtype="f8"))
 
-        if self.use_effective_index:
-            if self.wvg_height is None:
-                raise ValueError(
-                    "Need to supply wvg_height for effective index simulations!"
-                )
+        if self.wvg_height is not None:
+            self._check_neff()
             object.__setattr__(self, "n_core_ref", self.n_core)
             object.__setattr__(self, "n_core", self.neff)
+            logger.info(
+                f"Using effective index, set {self.n_core=} and {self.n_core_ref=}."
+            )
 
         self._check_resolution()
         self._check_dpml()
         self._check_ports()
         self._check_sources()
+
+    def _check_neff(self) -> None:
+        if len(set(p.width for p in self.source_ports)) > 1:
+            raise ValueError(
+                "Source regions have different widths and thus excite different modes. "
+                "Cannot do effective index calculations with different modes!"
+            )
 
     def _check_resolution(self) -> None:
         if (min_resolution := int(np.ceil(15 / self.min_wl))) > self.resolution:
@@ -170,12 +176,12 @@ class MultiportDevice:
         from gdsfactory.simulation.modes import find_modes_waveguide
 
         modes = find_modes_waveguide(
-            wg_width=self.wvg_width,
+            wg_width=self.source_ports[0].width,
             ncore=self.n_core,
             nclad=self.n_clad,
             wg_thickness=self.wvg_height,
             sz=10 * self.wvg_height,
-            sy=10 * self.wvg_width,
+            sy=self.monitor_size_fac * self.source_ports[0].width,
             nmodes=self.mode,
             resolution=self.resolution,
             parity=self.parity,
