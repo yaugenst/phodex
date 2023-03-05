@@ -146,7 +146,9 @@ class MultiportDevice2D:
         return pol_to_par[self.polarization]
 
     @property
-    def symmetries(self) -> list[mp.Symmetry]:
+    def symmetries(self) -> list[mp.Symmetry] | None:
+        if self.mirror_axis is None:
+            return None
         d = mp.X if self.mirror_axis == "x" else mp.Y
         p = 1 if self.polarization == "tm" else -1
         return [mp.Mirror(direction=d, phase=p)]
