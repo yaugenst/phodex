@@ -5,8 +5,8 @@ Examples for photonic design problems using various open-source tools.
 ## Installation
 
 You can install this by cloning the repository and doing a `pip install .`.
-Note that this does not install _any_ dependencies.
-The reason for this is that the requirements depend entirely on the examples that you want to run, so the recommended approach right now is to create an isolated environment (using e.g. [conda](https://docs.conda.io/en/latest/index.html) or [pyenv](https://github.com/pyenv/pyenv)) and then install whatever packages are needed yourself for the examples you want to try.
+Note that this installs only the most basic dependencies (such [NumPy](https://numpy.org/)) that are used for pretty much everything.
+Other dependencies, such as electromagnetic simulation tools, depend entirely on the examples that you want to run, so the recommended approach right now is to create an isolated environment (using e.g. [conda](https://docs.conda.io/en/latest/index.html) or [pyenv](https://github.com/pyenv/pyenv)) and then install whatever packages are needed yourself for the examples you want to try.
 Maybe there will be a more convenient way to do this in the future.
 
 ## Disclaimer
