@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+
+import autograd.numpy as np
+import nlopt
+
+from phodex.io import filter_stdout
+from phodex.layout.meep import MultiportDevice2D, Port
+from phodex.optim.callbacks import combine, logging_callback, plotting_callback
+from phodex.optim.nlopt import get_epigraph_formulation
+from phodex.topopt.parametrizations import sigmoid_parametrization
+
+
+def main():
+    sigma = 3
+    beta = 100
+    wvg_width = 0.5
+    resolution = 30
+    wavelengths = np.linspace(1.5, 1.6, 3)
+    design_region = [10, 6]
+
+    ports = [
+        Port(wvg_width, "-x", offset=2, source=True),
+        Port(wvg_width, "-x", offset=-2),
+        Port(wvg_width, "+x", offset=2),
+        Port(wvg_width, "+x", offset=-2),
+    ]
+
+    p = MultiportDevice2D(
+        ports=ports,
+        n_core=3.4865,
+        n_clad=1.4440,
+        wvg_height=0.22,
+        wavelengths=wavelengths,
+        resolution=resolution,
+        design_region_extent=design_region,
+        monitor_size_fac=7,
+    )
+
+    input_flux, _ = p.normalizations[0]
+
+    def p13(s11, s12, s13, s14):
+        p13 = np.abs(s13) ** 2 / input_flux
+        return 0.5 - p13
+
+    def p14(s11, s12, s13, s14):
+        p14 = np.abs(s14) ** 2 / input_flux
+        return 0.5 - p14
+
+    obj_funs = [p13, p14]
+    mpa_opt = p.get_optimization_problem(obj_funs)
+
+    filter_and_project = sigmoid_parametrization((p.nx, p.ny), sigma, beta)
+
+    def parametrization(x):
+        x = np.reshape(x, (p.nx // 2, p.ny // 2))
+        x = np.concatenate([x, np.fliplr(x)], axis=1)
+        x = np.concatenate([x, np.flipud(x)], axis=0)
+        x = filter_and_project(x)
+        return x
+
+    state_dict = {"obj_hist": [], "epivar_hist": [], "cur_iter": 0}
+    log_cb = logging_callback(state_dict, logscale=True)
+    plot_cb = plotting_callback(mpa_opt, p, state_dict, output_dir="output")
+
+    nlopt_obj, epi_cst = get_epigraph_formulation(
+        mpa_opt, parametrization, combine(log_cb, plot_cb)
+    )
+    epi_tol = np.full(len(obj_funs) * p.nfreq, 1e-4)
+
+    n = p.nx // 2 * p.ny // 2 + 1
+    x0 = np.full(n, 0.5)
+    lb = np.zeros_like(x0)
+    ub = np.ones_like(x0)
+
+    t0, _ = mpa_opt([parametrization(x0[1:])], need_gradient=False)
+    x0[0] = 1.05 * np.max(t0)
+    lb[0] = -np.inf
+    ub[0] = np.inf
+
+    opt = nlopt.opt(nlopt.LD_MMA, n)
+    opt.set_lower_bounds(lb)
+    opt.set_upper_bounds(ub)
+    opt.set_min_objective(nlopt_obj)
+    opt.add_inequality_mconstraint(epi_cst, epi_tol)
+    opt.set_param("dual_ftol_rel", 1e-7)
+    opt.set_maxeval(100)
+
+    with filter_stdout("phodex"):
+        x0[:] = opt.optimize(x0)
+
+
+if __name__ == "__main__":
+    main()
