@@ -109,7 +109,7 @@ class MultiportDevice2D:
             )
 
     def _check_resolution(self) -> None:
-        if (min_resolution := int(np.ceil(15 / self.min_wl))) > self.resolution:
+        if (min_resolution := int(np.ceil(10 / self.min_wl))) > self.resolution:
             logger.warning(
                 f"Resolution {self.resolution} is below the minimum recommended "
                 f"resolution of {min_resolution} - results will likely be inaccurate!",
@@ -341,11 +341,12 @@ class MultiportDevice2D:
 
             if not np.allclose(flux_near, flux_far, rtol=1e-3):
                 logger.warning(
-                    f"Excited mode is lossy! Try increasing {self.monitor_size_fac=}."
+                    "Excited mode is lossy! Try increasing "
+                    f"{self.monitor_size_fac=}. [ {flux_near=}, {flux_far=} ]"
                 )
 
-            flux_near_data = sim.get_flux_data(mon_near)
-            norms.append((flux_near, flux_near_data))
+            flux_far_data = sim.get_flux_data(mon_far)
+            norms.append((flux_far, flux_far_data))
         return norms
 
     @property
