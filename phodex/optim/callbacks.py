@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Callable, Iterable, TypedDict
 
 import matplotlib.pyplot as plt
+import meep as mp
 import meep.adjoint as mpa
 import numpy as np
 from cycler import cycler
@@ -40,6 +41,10 @@ def logging_callback(
         state_dict["obj_hist"].append(f0)
         state_dict["epivar_hist"].append(t)
         state_dict["cur_iter"] += 1
+
+        if not mp.am_master():
+            return
+
         logger.info(
             f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, objective (dB): '
             "[" + ", ".join(f"{post(ff):6.2f}" for ff in f0) + "]",
@@ -69,11 +74,14 @@ def plotting_callback(
         figure = plt.figure(figsize=(9, 6), tight_layout=True)
 
     def _callback(t, v, f0, grad):
-        figure.clf()
-
         design = np.real(mpa_opt.sim.get_epsilon()) - device.n_clad**2
         design /= device.n_core**2 - device.n_clad**2
         xx, yy, _, _ = mpa_opt.sim.get_array_metadata()
+
+        if not mp.am_master:
+            return
+
+        figure.clf()
 
         gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1])
 
