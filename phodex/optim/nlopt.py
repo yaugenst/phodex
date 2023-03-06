@@ -52,17 +52,19 @@ def get_epigraph_formulation(
     def _constraints(result: np.ndarray, x: np.ndarray, gd: np.ndarray) -> None:
         t, v = x[0], x[1:]
 
-        f0, grad = mpa_opt([mapping(v)])
+        f0, meep_grad = mpa_opt([mapping(v)])
 
         # f0 -> (obj_funs, wavelengths), grad -> (obj_funs, dofs, wavelengths)
         f0 = np.atleast_2d(f0)
-        grad = np.reshape(grad, (f0.shape[0], -1, f0.shape[-1]))
+        meep_grad = np.reshape(meep_grad, (f0.shape[0], -1, f0.shape[-1]))
 
         f0 = np.concatenate(f0, axis=0)
-        grad = np.concatenate(grad, axis=-1)
+        meep_grad = np.concatenate(meep_grad, axis=-1)
+
+        grad = np.zeros((v.size, meep_grad.shape[-1]))
 
         for k in range(grad.shape[-1]):
-            grad[:, k] = tensor_jacobian_product(mapping, 0)(v, grad[:, k])
+            grad[:, k] = tensor_jacobian_product(mapping, 0)(v, meep_grad[:, k])
 
         if gd.size > 0:
             gd[:, 0] = -1
