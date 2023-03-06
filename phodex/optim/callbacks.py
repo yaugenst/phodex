@@ -25,9 +25,16 @@ def combine(*functions: Callable) -> Callable:
     return _combined
 
 
-def logging_callback(state_dict: StateDict | None = None) -> Callable:
+def logging_callback(
+    state_dict: StateDict | None = None, logscale: bool = False
+) -> Callable:
     if state_dict is None:
         state_dict = {"obj_hist": [], "epivar_hist": [], "cur_iter": 0}
+
+    def post(x):
+        if logscale:
+            return 10 * np.log10(x)
+        return x
 
     def _callback(t, v, f0, grad) -> None:
         state_dict["obj_hist"].append(f0)
@@ -35,7 +42,7 @@ def logging_callback(state_dict: StateDict | None = None) -> Callable:
         state_dict["cur_iter"] += 1
         logger.info(
             f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, objective (dB): '
-            "[" + ", ".join(f"{10*np.log10(ff):6.2f}" for ff in f0) + "]",
+            "[" + ", ".join(f"{post(ff):6.2f}" for ff in f0) + "]",
             flush=True,
         )
 
@@ -46,7 +53,7 @@ def plotting_callback(
     mpa_opt: mpa.OptimizationProblem,
     device: MultiportDevice2D,
     state_dict: StateDict,
-    fig: figure.Figure | None = None,
+    figure: figure.Figure | None = None,
     output_dir: Path | str | None = None,
 ) -> Callable:
     obj_funs = mpa_opt.objective_functions
@@ -58,17 +65,19 @@ def plotting_callback(
         output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Saving plots to {output_dir.resolve()}.")
 
-    if fig is None:
-        fig = plt.figure(figsize=(9, 6), tight_layout=True)
+    if figure is None:
+        figure = plt.figure(figsize=(9, 6), tight_layout=True)
 
     def _callback(t, v, f0, grad):
+        figure.clf()
+
         design = np.real(mpa_opt.sim.get_epsilon()) - device.n_clad**2
         design /= device.n_core**2 - device.n_clad**2
         xx, yy, _, _ = mpa_opt.sim.get_array_metadata()
 
         gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1])
 
-        ax00 = fig.add_subplot(gs[0, 0])
+        ax00 = figure.add_subplot(gs[0, 0])
         prop_cycler = cycler(
             color=plt.cm.inferno(np.linspace(0.1, 0.9, nrows))
         ) * cycler(linestyle=["-", "--", ":", "-."][:ncols])
@@ -84,7 +93,7 @@ def plotting_callback(
         # legend
         row_names = [f"{int(1000 * w)} nm" for w in device.wavelengths]
         col_names = [f.__name__ for f in obj_funs]
-        legend_ax = fig.add_subplot(gs[1, :])
+        legend_ax = figure.add_subplot(gs[1, :])
         handles, labels = ax00.get_legend_handles_labels()
         add_legend_grid(handles, labels, row_names, col_names, legend_ax)
 
@@ -96,19 +105,16 @@ def plotting_callback(
         ax01.set_ylabel("epigraph dummy", color=color)
 
         # device
-        ax1 = fig.add_subplot(gs[0, 1])
+        ax1 = figure.add_subplot(gs[0, 1])
         ax1.pcolormesh(xx, yy, design.T, cmap="gray_r", vmin=0, vmax=1)
         ax1.set_aspect("equal")
         ax1.set_xlabel("x (μm)")
         ax1.set_ylabel("y (μm)")
 
         if output_dir is not None:
-            fig.savefig(
+            figure.savefig(
                 output_dir / f'out{state_dict["cur_iter"]-1:03d}.png',
                 bbox_inches="tight",
-                pad_inches=0.1,
             )
-
-        plt.close()
 
     return _callback

@@ -11,12 +11,12 @@ from phodex.topopt.parametrizations import sigmoid_parametrization
 
 
 def main():
-    sigma = 1
-    beta = 64
+    sigma = 3
+    beta = 100
     wvg_width = 0.5
     resolution = 20
     wavelengths = np.linspace(1.5, 1.6, 5)
-    design_region = [4, 2]
+    design_region = [3, 1.5]
 
     ports = [Port(wvg_width, "-x", source=True), Port(wvg_width, "+x")]
 
@@ -33,21 +33,18 @@ def main():
 
     input_flux, _ = p.normalizations[0]
 
-    def tran(s11, s12):
-        p = np.abs(s12) ** 2 / input_flux
-        return 1 - p
+    def loss(s11, s12):
+        refl = np.abs(s11) ** 2 / input_flux
+        tran = np.abs(s12) ** 2 / input_flux
+        return 1 - tran + refl
 
-    def refl(s11, s12):
-        p = np.abs(s11) ** 2 / input_flux
-        return p
-
-    obj_funs = [tran, refl]
+    obj_funs = [loss]
     mpa_opt = p.get_optimization_problem(obj_funs)
 
     parametrization = sigmoid_parametrization((p.nx, p.ny), sigma, beta)
 
     state_dict = {"obj_hist": [], "epivar_hist": [], "cur_iter": 0}
-    log_cb = logging_callback(state_dict)
+    log_cb = logging_callback(state_dict, logscale=True)
     plot_cb = plotting_callback(mpa_opt, p, state_dict, output_dir="output")
 
     nlopt_obj, epi_cst = get_epigraph_formulation(
@@ -71,7 +68,7 @@ def main():
     opt.set_min_objective(nlopt_obj)
     opt.add_inequality_mconstraint(epi_cst, epi_tol)
     opt.set_param("dual_ftol_rel", 1e-7)
-    opt.set_maxeval(1)
+    opt.set_maxeval(100)
 
     with filter_stdout("phodex"):
         x0[:] = opt.optimize(x0)
