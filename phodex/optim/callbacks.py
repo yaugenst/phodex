@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Iterable, TypedDict
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import meep as mp
@@ -11,12 +11,7 @@ from matplotlib import figure, gridspec
 
 from phodex.layout.meep import MultiportDevice2D
 from phodex.plotting import add_legend_grid
-
-
-class StateDict(TypedDict):
-    obj_hist: list[Iterable[float]]
-    epivar_hist: list[float]
-    cur_iter: int
+from phodex.types import StateDict
 
 
 def combine(*functions: Callable) -> Callable:

@@ -8,6 +8,8 @@ import meep.adjoint as mpa
 import numpy as np
 from loguru import logger
 
+from phodex.types import PICNormalizationData
+
 
 @dataclass(frozen=True)
 class Port:
@@ -297,7 +299,7 @@ class MultiportDevice2D:
         )
 
     @cached_property
-    def normalizations(self) -> list[tuple[np.ndarray, mp.simulation.FluxData]]:
+    def normalizations(self) -> list[PICNormalizationData]:
         norms = []
         for source, port in zip(self.sources, self.source_ports):
             wvg_center, wvg_size = port.get_center_size(self.cell, self.dpml)
@@ -344,6 +346,8 @@ class MultiportDevice2D:
 
             flux_near = np.abs(c_near.alpha[self.mode - 1, :, idx]) ** 2
             flux_far = np.abs(c_far.alpha[self.mode - 1, :, idx]) ** 2
+            flux_far_data = sim.get_flux_data(mon_far)
+            flux_near_data = sim.get_flux_data(mon_near)
 
             if not np.allclose(flux_near, flux_far, rtol=1e-3):
                 logger.warning(
@@ -351,14 +355,20 @@ class MultiportDevice2D:
                     f"{self.monitor_size_fac=}. [ {flux_near=}, {flux_far=} ]"
                 )
 
-            flux_far_data = sim.get_flux_data(mon_far)
-            norms.append((flux_far, flux_far_data))
+            norms.append(
+                {
+                    "flux_near": flux_near,
+                    "flux_near_data": flux_near_data,
+                    "flux_far": flux_far,
+                    "flux_far_data": flux_far_data,
+                }
+            )
         return norms
 
     @property
     def objective_monitors(self) -> list[Callable]:
         monitors = []
-        for (_, flux_data), port in zip(self.normalizations, self.source_ports):
+        for norm_data, port in zip(self.normalizations, self.source_ports):
             c, s = port.get_center_size(self.cell, self.dpml, self.monitor_size_fac)
             c[port.kpoint_idx] += port.kpoint_val * self.monitor_offset
             monitors.append(
@@ -368,7 +378,7 @@ class MultiportDevice2D:
                     mode=self.mode,
                     eig_parity=self.parity,
                     forward="+" in port.axis,
-                    subtracted_dft_fields=flux_data,
+                    subtracted_dft_fields=norm_data["flux_near_data"],
                 )
             )
         for port in [p for p in self.ports if p not in self.source_ports]:
