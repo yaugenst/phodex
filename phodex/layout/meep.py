@@ -72,7 +72,7 @@ class MultiportDevice2D:
     monitor_offset: float = 0.2
 
     resolution: int = 30
-    design_resolution: int = 2 * resolution
+    design_resolution: int = 4 * resolution
     wavelengths: Iterable[float] = (1.55,)
     mode: int = 1
     dpml: float = 1.0
