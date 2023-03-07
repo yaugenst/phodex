@@ -84,6 +84,7 @@ class MultiportDevice2D:
 
     design_region_extent: tuple[float, float] = (3.0, 3.0)
     buffer_xy: tuple[float, float] = (1.0, 1.0)
+    damping: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "wavelengths", np.array(self.wavelengths, dtype="f8"))
@@ -232,7 +233,12 @@ class MultiportDevice2D:
     @cached_property
     def design_region(self) -> mpa.DesignRegion:
         return mpa.DesignRegion(
-            mp.MaterialGrid(mp.Vector3(self.nx, self.ny), self.cladding, self.core),
+            mp.MaterialGrid(
+                mp.Vector3(self.nx, self.ny),
+                self.cladding,
+                self.core,
+                damping=self.damping * 2 * np.pi * self.fcen,
+            ),
             volume=mp.Volume(
                 center=mp.Vector3(),
                 size=mp.Vector3(*self.design_region_extent),
