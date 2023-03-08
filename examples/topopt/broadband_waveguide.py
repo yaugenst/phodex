@@ -11,8 +11,8 @@ from phodex.topopt.parametrizations import sigmoid_parametrization
 
 
 def main():
-    sigma = 3
-    beta = 100
+    sigma = 4
+    beta = 20
     wvg_width = 0.5
     resolution = 20
     wavelengths = np.linspace(1.5, 1.6, 5)
@@ -29,16 +29,20 @@ def main():
         resolution=resolution,
         design_region_extent=design_region,
         monitor_size_fac=6,
+        damping=1e-2,
     )
 
-    input_flux, _ = p.normalizations[0]
+    input_flux_far = p.normalizations[0]["flux_far"]
+    input_flux_near = p.normalizations[0]["flux_near"]
 
     def loss(s11, s12):
-        refl = np.abs(s11) ** 2 / input_flux
-        tran = np.abs(s12) ** 2 / input_flux
-        return 1 - tran + refl
+        return 1 - np.abs(s12) ** 2 / input_flux_far
 
-    obj_funs = [loss]
+    def refl(s11, s12):
+        refl = np.abs(s11) ** 2 / input_flux_near
+        return refl
+
+    obj_funs = [loss, refl]
     mpa_opt = p.get_optimization_problem(obj_funs)
 
     parametrization = sigmoid_parametrization((p.nx, p.ny), sigma, beta)
