@@ -4,6 +4,10 @@ from phodex.topopt.filters import gaussian_filter
 
 
 def sigmoid_projection(x, a, b=0.5):
+    if a == 0:
+        return x
+    if np.isinf(a):
+        return (x > b) * x
     num = np.tanh(a * b) + np.tanh(a * (x - b))
     denom = np.tanh(a * b) + np.tanh(a * (1 - b))
     return num / denom
