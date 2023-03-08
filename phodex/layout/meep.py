@@ -78,7 +78,6 @@ class MultiportDevice2D:
     wavelengths: Iterable[float] = (1.55,)
     mode: int = 1
     dpml: float = 1.0
-    df: float = 0.2
     stop_tol: float = 1e-6
     polarization: Literal["te", "tm"] = "tm"
     mirror_axis: Literal["x", "y"] | None = None
@@ -223,6 +222,10 @@ class MultiportDevice2D:
     @property
     def lcen(self) -> float:
         return np.mean(self.wavelengths)
+
+    @property
+    def df(self) -> float:
+        return 0.1 * self.fcen
 
     @property
     def nx(self) -> int:
