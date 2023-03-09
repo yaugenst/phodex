@@ -5,6 +5,26 @@ from autograd import tensor_jacobian_product
 from meep.adjoint import OptimizationProblem
 
 
+def get_objective(
+    mpa_opt: OptimizationProblem,
+    mapping: Callable,
+    callback: Callable | None = None,
+) -> Callable:
+    def _objective(x, gd):
+        f0, meep_grad = mpa_opt([mapping(x)])
+        f0 = np.real(f0)
+
+        if gd.size > 0:
+            gd[:] = tensor_jacobian_product(mapping, 0)(x, np.sum(meep_grad, axis=1))
+
+        if callback:
+            callback(x, f0, meep_grad)
+
+        return f0
+
+    return _objective
+
+
 def get_epigraph_formulation(
     mpa_opt: OptimizationProblem,
     mapping: Callable,
