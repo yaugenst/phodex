@@ -1,4 +1,4 @@
-from typing import Iterable, TypedDict
+from typing import Iterable, NotRequired, TypedDict
 
 from meep.simulation import FluxData
 from numpy import ndarray
@@ -6,8 +6,8 @@ from numpy import ndarray
 
 class StateDict(TypedDict):
     obj_hist: list[Iterable[float]]
-    epivar_hist: list[float]
     cur_iter: int
+    epivar_hist: NotRequired[list[float]]
 
 
 class PICNormalizationData(TypedDict):
