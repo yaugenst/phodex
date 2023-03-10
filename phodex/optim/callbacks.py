@@ -20,6 +20,67 @@ def combine(*functions: Callable) -> Callable:
     return _combined
 
 
+def log_simple(state_dict: StateDict | None = None, logscale: bool = False) -> Callable:
+    if state_dict is None:
+        state_dict = {"obj_hist": [], "cur_iter": 0}
+
+    def post(x: np.ndarray):
+        if logscale:
+            return 10 * np.log10(x)
+        return x
+
+    def _callback(x, f0, grad) -> None:
+        state_dict["obj_hist"].append(f0)
+        state_dict["cur_iter"] += 1
+
+        if not mp.am_master():
+            return
+
+        logger.info(
+            f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, '
+            f"objective: {post(f0)}",
+            flush=True,
+        )
+
+    return _callback, state_dict
+
+
+def plot_simple(
+    mpa_opt: mpa.OptimizationProblem,
+    state_dict: StateDict,
+    figure: figure.Figure | None = None,
+    output_dir: Path | str | None = None,
+) -> Callable:
+    obj_funs = mpa_opt.objective_functions
+
+    if output_dir is not None:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Saving plots to {output_dir.resolve()}.")
+
+    if figure is None:
+        figure, ax = plt.subplots(1, 2, figsize=(9, 4), tight_layout=True)
+
+    def _callback(x: np.ndarray, f0: float, grad: np.ndarray) -> None:
+        ax[0].cla()
+        ax[0].plot(np.asarray(state_dict["obj_hist"]))
+        ax[0].set_xlabel("iteration")
+        ax[0].set_ylabel(obj_funs[0].__name__)
+        ax[0].set_yscale("log")
+
+        # device
+        ax[1].cla()
+        mpa_opt.plot2D(ax=ax[1], plot_monitors_flag=False, plot_sources_flag=False)
+
+        if mp.am_master() and output_dir is not None:
+            figure.savefig(
+                output_dir / f'out{state_dict["cur_iter"]-1:03d}.png',
+                bbox_inches="tight",
+            )
+
+    return _callback
+
+
 def log_epigraph(
     state_dict: StateDict | None = None, logscale: bool = False
 ) -> Callable:
