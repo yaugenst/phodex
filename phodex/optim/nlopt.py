@@ -13,6 +13,7 @@ def get_objective(
     def _objective(x, gd):
         f0, meep_grad = mpa_opt([mapping(x)])
         f0 = np.real(f0)
+        meep_grad = np.reshape(meep_grad, (np.atleast_1d(meep_grad).shape[0], -1))
 
         if gd.size > 0:
             gd[:] = tensor_jacobian_product(mapping, 0)(x, np.sum(meep_grad, axis=1))
