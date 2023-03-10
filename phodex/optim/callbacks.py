@@ -148,7 +148,7 @@ def plot_epigraph(
         ax00.set_yscale("log")
 
         # legend
-        row_names = [f"{int(1000 * w)} nm" for w in 1 / mpa_opt.wavelengths]
+        row_names = [f"{int(1000 * w)} nm" for w in 1 / mpa_opt.frequencies]
         col_names = [f.__name__ for f in obj_funs]
         legend_ax = figure.add_subplot(gs[1, :])
         handles, labels = ax00.get_legend_handles_labels()
