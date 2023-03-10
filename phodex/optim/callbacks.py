@@ -9,7 +9,6 @@ from cycler import cycler
 from loguru import logger
 from matplotlib import figure, gridspec
 
-from phodex.layout.meep import MultiportDevice2D
 from phodex.plotting import add_legend_grid
 from phodex.types import StateDict
 
@@ -21,18 +20,20 @@ def combine(*functions: Callable) -> Callable:
     return _combined
 
 
-def logging_callback(
+def log_epigraph(
     state_dict: StateDict | None = None, logscale: bool = False
 ) -> Callable:
     if state_dict is None:
         state_dict = {"obj_hist": [], "epivar_hist": [], "cur_iter": 0}
 
-    def post(x):
+    def post(x: np.ndarray) -> np.ndarray:
         if logscale:
             return 10 * np.log10(x)
         return x
 
-    def _callback(t, v, f0, grad) -> None:
+    def _callback(x: np.ndarray, f0: float, grad: np.ndarray) -> None:
+        t = x[0]
+
         state_dict["obj_hist"].append(f0)
         state_dict["epivar_hist"].append(t)
         state_dict["cur_iter"] += 1
@@ -41,23 +42,22 @@ def logging_callback(
             return
 
         logger.info(
-            f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, objective (dB): '
+            f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, objective: '
             "[" + ", ".join(f"{post(ff):6.2f}" for ff in f0) + "]",
             flush=True,
         )
 
-    return _callback
+    return _callback, state_dict
 
 
-def plotting_callback(
+def plot_epigraph(
     mpa_opt: mpa.OptimizationProblem,
-    device: MultiportDevice2D,
     state_dict: StateDict,
     figure: figure.Figure | None = None,
     output_dir: Path | str | None = None,
 ) -> Callable:
     obj_funs = mpa_opt.objective_functions
-    nrows = len(device.wavelengths)
+    nrows = len(mpa_opt.frequencies)
     ncols = len(obj_funs)
 
     if output_dir is not None:
@@ -68,14 +68,7 @@ def plotting_callback(
     if figure is None:
         figure = plt.figure(figsize=(9, 6), tight_layout=True)
 
-    def _callback(t, v, f0, grad):
-        design = np.real(mpa_opt.sim.get_epsilon()) - device.n_clad**2
-        design /= device.n_core**2 - device.n_clad**2
-        xx, yy, _, _ = mpa_opt.sim.get_array_metadata()
-
-        if not mp.am_master:
-            return
-
+    def _callback(x: np.ndarray, f0: float, grad: np.ndarray) -> None:
         figure.clf()
 
         gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1])
@@ -94,7 +87,7 @@ def plotting_callback(
         ax00.set_yscale("log")
 
         # legend
-        row_names = [f"{int(1000 * w)} nm" for w in device.wavelengths]
+        row_names = [f"{int(1000 * w)} nm" for w in 1 / mpa_opt.wavelengths]
         col_names = [f.__name__ for f in obj_funs]
         legend_ax = figure.add_subplot(gs[1, :])
         handles, labels = ax00.get_legend_handles_labels()
@@ -109,12 +102,9 @@ def plotting_callback(
 
         # device
         ax1 = figure.add_subplot(gs[0, 1])
-        ax1.pcolormesh(xx, yy, design.T, cmap="gray_r", vmin=0, vmax=1)
-        ax1.set_aspect("equal")
-        ax1.set_xlabel("x (μm)")
-        ax1.set_ylabel("y (μm)")
+        mpa_opt.plot2D(ax=ax1, plot_monitors_flag=False, plot_sources_flag=False)
 
-        if output_dir is not None:
+        if mp.am_master() and output_dir is not None:
             figure.savefig(
                 output_dir / f'out{state_dict["cur_iter"]-1:03d}.png',
                 bbox_inches="tight",

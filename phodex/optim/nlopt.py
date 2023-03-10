@@ -10,7 +10,7 @@ def get_objective(
     mapping: Callable,
     callback: Callable | None = None,
 ) -> Callable:
-    def _objective(x, gd):
+    def _objective(x: float, gd: np.ndarray) -> float:
         f0, meep_grad = mpa_opt([mapping(x)])
         f0 = np.real(f0)
         meep_grad = np.reshape(meep_grad, (np.atleast_1d(meep_grad).shape[0], -1))
@@ -94,6 +94,6 @@ def get_epigraph_formulation(
         result[:] = np.real(f0) - t
 
         if callback:
-            callback(t, v, f0, grad)
+            callback(x, f0, grad)
 
     return _objective, _constraints
