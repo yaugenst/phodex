@@ -121,20 +121,20 @@ def pad(
         return x
 
     if axis is None:
-        pad_axes = (-2, -1)
+        axis = (-2, -1)
 
     match mode:
         case "constant":
             p = (x.ndim - 2) * [(0, 0)] + 2 * [(pad, pad)]
             return np.pad(x, p, mode="constant")
         case "edge":
-            return edge_pad(x, pad, pad_axes)
+            return edge_pad(x, pad, axis)
         case "reflect":
-            return reflection_pad(x, pad, pad_axes)
+            return reflection_pad(x, pad, axis)
         case "symmetric":
-            return symmetric_pad(x, pad, pad_axes)
+            return symmetric_pad(x, pad, axis)
         case "wrap":
-            return circular_pad(x, pad, pad_axes)
+            return circular_pad(x, pad, axis)
         case _:
             raise ValueError(f"Unsupported padding mode: {mode}")
 
