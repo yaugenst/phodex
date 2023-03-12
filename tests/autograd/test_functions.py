@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import scipy.ndimage
 from autograd.test_util import check_grads
 from numpy.testing import assert_allclose
 from scipy.signal import convolve as convolve_sp
@@ -9,6 +10,11 @@ from phodex.autograd.functions import (
     circular_pad,
     convolve,
     edge_pad,
+    grey_closing,
+    grey_dilation,
+    grey_erosion,
+    grey_opening,
+    morphological_gradient,
     pad,
     reflection_pad,
     symmetric_pad,
@@ -94,3 +100,79 @@ def test_convolve_grad(rng, mode, size, ks):
     x = rng.random((size, size))
     k = rng.random((ks, ks))
     check_grads(convolve, modes=["rev"], order=2)(x, k, mode=mode)
+
+
+@pytest.mark.parametrize(
+    "op,sp_op",
+    [
+        (grey_dilation, scipy.ndimage.grey_dilation),
+        (grey_erosion, scipy.ndimage.grey_erosion),
+        (grey_opening, scipy.ndimage.grey_opening),
+        (grey_closing, scipy.ndimage.grey_closing),
+        (morphological_gradient, scipy.ndimage.morphological_gradient),
+    ],
+)
+@pytest.mark.parametrize(
+    "mode,ndimg_mode",
+    [
+        ("reflect", "reflect"),
+        ("constant", "constant"),
+        ("symmetric", "mirror"),
+        ("wrap", "wrap"),
+    ],
+)
+@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ks", [1, 3])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "flat",
+        pytest.param(
+            "full",
+            marks=pytest.mark.xfail(
+                reason="Full structuring elements are not supported yet."
+            ),
+        ),
+    ],
+)
+def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, size, ks, kind):
+    x = rng.random((size, size))
+
+    match kind:
+        case "flat":
+            s = np.ones((ks, ks))
+        case "full":
+            s = rng.randint(0, 2, (ks, ks))
+
+    assert_allclose(op(x, s, mode=mode), sp_op(x, structure=s, mode=ndimg_mode))
+
+
+@pytest.mark.parametrize(
+    "op",
+    [grey_dilation, grey_erosion, grey_opening, grey_closing, morphological_gradient],
+)
+@pytest.mark.parametrize("mode", ["reflect", "constant", "symmetric", "wrap"])
+@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ks", [1, 3])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "flat",
+        pytest.param(
+            "full",
+            marks=pytest.mark.xfail(
+                reason="Full structuring elements are not supported yet."
+            ),
+        ),
+    ],
+)
+def test_morphology_grad(rng, op, mode, size, ks, kind):
+    x = rng.random((size, size))
+
+    match kind:
+        case "flat":
+            s = np.ones((ks, ks))
+        case "full":
+            s = rng.randint(0, 2, (ks, ks))
+
+    check_grads(op, modes=["rev"], order=2)(x, s, mode=mode)

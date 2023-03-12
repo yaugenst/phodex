@@ -161,3 +161,46 @@ def convolve(
     x = pad(x, p, pad_axes, mode)
     x = convolve_ag(x, k, axes, dot_axes, mode="valid")
     return x
+
+
+def grey_dilation(x: np.ndarray, k: np.ndarray, mode="reflect") -> np.ndarray:
+    h, w = k.shape
+    bias = np.reshape(np.where(k == 0, -1, 0), (-1, 1, 1))
+    k = np.reshape(np.eye(h * w), (h * w, h, w))
+
+    x = convolve(x, k, axes=([0, 1], [1, 2]), mode=mode) + bias
+    x = np.max(x, axis=0) + 1
+
+    return x
+
+
+def grey_erosion(x: np.ndarray, k: np.ndarray, mode="reflect") -> np.ndarray:
+    return -grey_dilation(-x, k, mode)
+
+
+def grey_opening(x: np.ndarray, k: np.ndarray, mode="reflect") -> np.ndarray:
+    x = grey_erosion(x, k, mode)
+    x = grey_dilation(x, k, mode)
+    return x
+
+
+def grey_closing(x: np.ndarray, k: np.ndarray, mode="reflect") -> np.ndarray:
+    x = grey_dilation(x, k, mode)
+    x = grey_erosion(x, k, mode)
+    return x
+
+
+def morphological_gradient(x: np.ndarray, k: np.ndarray, mode="reflect") -> np.ndarray:
+    return grey_dilation(x, k, mode) - grey_erosion(x, k, mode)
+
+
+def morphological_gradient_internal(
+    x: np.ndarray, k: np.ndarray, mode="reflect"
+) -> np.ndarray:
+    return x - grey_erosion(x, k, mode)
+
+
+def morphological_gradient_external(
+    x: np.ndarray, k: np.ndarray, mode="reflect"
+) -> np.ndarray:
+    return grey_dilation(x, k, mode) - x
