@@ -36,68 +36,68 @@ def rng():
         (symmetric_pad, "symmetric"),
     ],
 )
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("padding", [1, 2])
-def test_pad_func_val(rng, func, mode, size, padding):
-    x = rng.random((size, size))
+def test_pad_func_val(rng, func, mode, ary_size, padding):
+    x = rng.random((ary_size, ary_size))
     assert_allclose(func(x, padding), np.pad(x, padding, mode=mode))
 
 
 @pytest.mark.parametrize(
     "func", [circular_pad, edge_pad, reflection_pad, symmetric_pad]
 )
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("padding", [1, 2])
-def test_pad_func_grad(rng, func, size, padding):
-    x = rng.random((size, size))
+def test_pad_func_grad(rng, func, ary_size, padding):
+    x = rng.random((ary_size, ary_size))
     check_grads(func, modes=["fwd", "rev"], order=2)(x, padding)
 
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("padding", [0, 1, 2])
-def test_pad_val(rng, mode, size, padding):
-    x = rng.random((size, size))
+def test_pad_val(rng, mode, ary_size, padding):
+    x = rng.random((ary_size, ary_size))
     assert_allclose(pad(x, padding, mode=mode), np.pad(x, padding, mode=mode))
 
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("padding", [0, 1, 2])
-def test_pad_grad(rng, mode, size, padding):
-    x = rng.random((size, size))
+def test_pad_grad(rng, mode, ary_size, padding):
+    x = rng.random((ary_size, ary_size))
     check_grads(pad, modes=["fwd", "rev"], order=2)(x, padding, mode=mode)
 
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
-def test_convolve_shape(rng, mode, size, ks):
-    x = rng.random((size, size))
+def test_convolve_shape(rng, mode, ary_size, ks):
+    x = rng.random((ary_size, ary_size))
     k = rng.random((ks, ks))
     c = convolve(x, k, mode=mode)
     assert_allclose(x.shape, c.shape)
 
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
-def test_convolve_val(rng, mode, size, ks):
+def test_convolve_val(rng, mode, ary_size, ks):
     def _conv(x, k, mode):
         p = k.shape[-1] // 2
         x = np.pad(x, p, mode=mode)
         return convolve_sp(x, k, mode="valid")
 
-    x = rng.random((size, size))
+    x = rng.random((ary_size, ary_size))
     k = rng.random((ks, ks))
     assert_allclose(convolve(x, k, mode=mode), _conv(x, k, mode=mode))
 
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
-def test_convolve_grad(rng, mode, size, ks):
-    x = rng.random((size, size))
+def test_convolve_grad(rng, mode, ary_size, ks):
+    x = rng.random((ary_size, ary_size))
     k = rng.random((ks, ks))
     check_grads(convolve, modes=["rev"], order=2)(x, k, mode=mode)
 
@@ -121,7 +121,7 @@ def test_convolve_grad(rng, mode, size, ks):
         ("wrap", "wrap"),
     ],
 )
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
 @pytest.mark.parametrize(
     "kind",
@@ -135,8 +135,8 @@ def test_convolve_grad(rng, mode, size, ks):
         ),
     ],
 )
-def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, size, ks, kind):
-    x = rng.random((size, size))
+def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, ary_size, ks, kind):
+    x = rng.random((ary_size, ary_size))
 
     match kind:
         case "flat":
@@ -152,7 +152,7 @@ def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, size, ks, kind):
     [grey_dilation, grey_erosion, grey_opening, grey_closing, morphological_gradient],
 )
 @pytest.mark.parametrize("mode", ["reflect", "constant", "symmetric", "wrap"])
-@pytest.mark.parametrize("size", [10, 11])
+@pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
 @pytest.mark.parametrize(
     "kind",
@@ -166,8 +166,8 @@ def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, size, ks, kind):
         ),
     ],
 )
-def test_morphology_grad(rng, op, mode, size, ks, kind):
-    x = rng.random((size, size))
+def test_morphology_grad(rng, op, mode, ary_size, ks, kind):
+    x = rng.random((ary_size, ary_size))
 
     match kind:
         case "flat":
