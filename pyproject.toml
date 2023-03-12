@@ -13,8 +13,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dynamic = ["version"]
-dependencies = ["numpy", "matplotlib", "loguru"]
+dependencies = ["numpy", "scipy", "matplotlib", "loguru"]
 requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = ["pytest"]
 
 [project.urls]
 Source = "https://github.com/mrbaozi/photonic_design_examples"
