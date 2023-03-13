@@ -4,6 +4,13 @@ import autograd.numpy as np
 from autograd.scipy.signal import convolve as convolve_ag
 
 _pad_modes = Literal["constant", "edge", "reflect", "symmetric", "wrap"]
+_mode_to_scipy = {
+    "constant": "constant",
+    "edge": "nearest",
+    "reflect": "mirror",
+    "symmetric": "reflect",
+    "wrap": "wrap",
+}
 
 
 def edge_pad(x: np.ndarray, pad: int, axis: int | Iterable | None = None) -> np.ndarray:

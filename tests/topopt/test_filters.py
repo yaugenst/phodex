@@ -14,30 +14,31 @@ def rng():
 
 
 @pytest.mark.parametrize("ary_size", [10, 11])
-@pytest.mark.parametrize("sigma", [1, 2])
+@pytest.mark.parametrize("filter_size", [3, 5])
 @pytest.mark.parametrize(
     "mode",
     [
-        "reflect",
         "constant",
+        "symmetric",
         "wrap",
         pytest.param(
-            "nearest",
+            "edge",
             marks=pytest.mark.xfail(
-                reason="Grads for mode `nearest` not implemented for Gaussian filter."
+                reason="Grads for mode `edge` not implemented for Gaussian filter."
             ),
         ),
         pytest.param(
-            "mirror",
+            "reflect",
             marks=pytest.mark.xfail(
-                reason="Grads for mode `mirror` not implemented for Gaussian filter."
+                reason="Grads for mode `reflect` not implemented for Gaussian filter."
             ),
         ),
     ],
 )
-def test_gaussian_filter_grad(rng, ary_size, sigma, mode):
+def test_gaussian_filter_grad(rng, ary_size, filter_size, mode):
     x = rng.random((ary_size, ary_size))
-    check_grads(gaussian_filter, modes=["rev"], order=2)(x, sigma, mode=mode)
+    f = gaussian_filter(filter_size, mode)
+    check_grads(f, modes=["rev"], order=2)(x)
 
 
 @pytest.mark.parametrize("func", [cone_filter, disk_filter])
@@ -50,10 +51,13 @@ def test_filter_grad(rng, func, ary_size, filter_size, mode):
     check_grads(f, modes=["rev"], order=2)(x)
 
 
-@pytest.mark.parametrize("func", [cone_filter, disk_filter])
+@pytest.mark.parametrize("func", [gaussian_filter, cone_filter, disk_filter])
 @pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("filter_size", [3, 5])
-@pytest.mark.parametrize("mode", ["symmetric", "wrap"])
+@pytest.mark.parametrize(
+    "mode",
+    ["symmetric", "wrap"],
+)
 def test_filter_energy_conservation(rng, func, ary_size, filter_size, mode):
     x = rng.random((ary_size, ary_size))
     f = func(filter_size, mode)
