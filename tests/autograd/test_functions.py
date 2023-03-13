@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose
 from scipy.signal import convolve as convolve_sp
 
 from phodex.autograd.functions import (
+    _mode_to_scipy,
     _pad_modes,
     circular_pad,
     convolve,
@@ -112,15 +113,7 @@ def test_convolve_grad(rng, mode, ary_size, ks):
         (morphological_gradient, scipy.ndimage.morphological_gradient),
     ],
 )
-@pytest.mark.parametrize(
-    "mode,ndimg_mode",
-    [
-        ("reflect", "reflect"),
-        ("constant", "constant"),
-        ("symmetric", "mirror"),
-        ("wrap", "wrap"),
-    ],
-)
+@pytest.mark.parametrize("mode", _pad_modes.__args__)
 @pytest.mark.parametrize("ary_size", [10, 11])
 @pytest.mark.parametrize("ks", [1, 3])
 @pytest.mark.parametrize(
@@ -135,7 +128,7 @@ def test_convolve_grad(rng, mode, ary_size, ks):
         ),
     ],
 )
-def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, ary_size, ks, kind):
+def test_morphology_val(rng, op, sp_op, mode, ary_size, ks, kind):
     x = rng.random((ary_size, ary_size))
 
     match kind:
@@ -144,6 +137,7 @@ def test_morphology_val(rng, op, sp_op, mode, ndimg_mode, ary_size, ks, kind):
         case "full":
             s = rng.randint(0, 2, (ks, ks))
 
+    ndimg_mode = _mode_to_scipy[mode]
     assert_allclose(op(x, s, mode=mode), sp_op(x, structure=s, mode=ndimg_mode))
 
 
