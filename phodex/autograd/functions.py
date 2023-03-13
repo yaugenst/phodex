@@ -157,10 +157,9 @@ def convolve(
         raise NotImplementedError(
             f"Non-square kernels not implemented yet! Got {k.shape}"
         )
+
     if k.shape[-1] % 2 == 0:
-        raise NotImplementedError(
-            f"Even-sized kernels not supported yet! Got {k.shape}"
-        )
+        k = np.pad(k, ((0, 1), (0, 1)))
 
     pad_axes = axes[0] if axes is not None else None
     p = k.shape[-1] // 2

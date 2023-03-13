@@ -72,7 +72,7 @@ def test_pad_grad(rng, mode, ary_size, padding):
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
 @pytest.mark.parametrize("ary_size", [10, 11])
-@pytest.mark.parametrize("ks", [1, 3])
+@pytest.mark.parametrize("ks", [1, 2, 3])
 def test_convolve_shape(rng, mode, ary_size, ks):
     x = rng.random((ary_size, ary_size))
     k = rng.random((ks, ks))
@@ -82,7 +82,19 @@ def test_convolve_shape(rng, mode, ary_size, ks):
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
 @pytest.mark.parametrize("ary_size", [10, 11])
-@pytest.mark.parametrize("ks", [1, 3])
+@pytest.mark.parametrize(
+    "ks",
+    [
+        1,
+        pytest.param(
+            2,
+            marks=pytest.mark.xfail(
+                reason="Even kernels use a different convention than SciPy."
+            ),
+        ),
+        3,
+    ],
+)
 def test_convolve_val(rng, mode, ary_size, ks):
     def _conv(x, k, mode):
         p = k.shape[-1] // 2
@@ -96,7 +108,7 @@ def test_convolve_val(rng, mode, ary_size, ks):
 
 @pytest.mark.parametrize("mode", _pad_modes.__args__)
 @pytest.mark.parametrize("ary_size", [10, 11])
-@pytest.mark.parametrize("ks", [1, 3])
+@pytest.mark.parametrize("ks", [1, 2, 3])
 def test_convolve_grad(rng, mode, ary_size, ks):
     x = rng.random((ary_size, ary_size))
     k = rng.random((ks, ks))
