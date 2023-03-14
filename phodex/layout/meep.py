@@ -243,6 +243,7 @@ class MultiportDevice2D:
                 self.cladding,
                 self.core,
                 damping=self.damping * 2 * np.pi * self.fcen,
+                do_averaging=False,
             ),
             volume=mp.Volume(
                 center=mp.Vector3(),
