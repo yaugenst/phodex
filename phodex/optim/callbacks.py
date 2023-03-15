@@ -37,8 +37,7 @@ def log_simple(state_dict: StateDict | None = None, logscale: bool = False) -> C
             return
 
         logger.info(
-            f'iteration: {state_dict["cur_iter"]-1:3d}, t: {t:11.4e}, '
-            f"objective: {post(f0)}",
+            f'iteration: {state_dict["cur_iter"]-1:3d}, objective: {post(f0)}',
             flush=True,
         )
 
