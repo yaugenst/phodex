@@ -145,7 +145,7 @@ class MultiportDevice2D:
 
     @property
     def parity(self) -> int:
-        pol_to_par = {"te": mp.ODD_Y + mp.EVEN_Z, "tm": mp.EVEN_Y + mp.ODD_Z}
+        pol_to_par = {"tm": mp.ODD_Y + mp.EVEN_Z, "te": mp.EVEN_Y + mp.ODD_Z}
         return pol_to_par[self.polarization]
 
     @property
