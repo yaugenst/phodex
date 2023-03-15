@@ -6,7 +6,6 @@ import shapely
 import shapely.affinity
 from femwell.mesh import mesh_from_OrderedDict
 from femwell.mode_solver import compute_modes
-from shapely.ops import clip_by_rect
 from skfem import Basis, ElementTriP0
 from skfem.io.meshio import from_meshio
 
@@ -24,11 +23,7 @@ def get_neff_femwell(
     core = shapely.geometry.box(-wvg_width / 2, 0, wvg_width / 2, wvg_height)
     env = shapely.affinity.scale(core.buffer(5, resolution=10), xfact=0.5)
 
-    polygons = OrderedDict(
-        core=core,
-        box=clip_by_rect(env, -np.inf, -np.inf, np.inf, 0),
-        clad=clip_by_rect(env, -np.inf, 0, np.inf, np.inf),
-    )
+    polygons = OrderedDict(core=core, clad=env)
 
     resolutions = dict(core={"resolution": 1 / (2 * resolution), "distance": 0.5})
 
@@ -38,7 +33,7 @@ def get_neff_femwell(
 
     basis0 = Basis(mesh, ElementTriP0(), intorder=4)
     epsilon = basis0.zeros()
-    for subdomain, n in {"core": n_core, "box": n_clad, "clad": n_clad}.items():
+    for subdomain, n in {"core": n_core, "clad": n_clad}.items():
         epsilon[basis0.get_dofs(elements=subdomain)] = n**2
 
     mode_idx = 0 if polarization == "te" else 1
