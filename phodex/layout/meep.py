@@ -86,6 +86,7 @@ class MultiportDevice2D:
     design_region_extent: tuple[float, float] = (3.0, 3.0)
     buffer_xy: tuple[float, float] = (1.0, 1.0)
     damping: float = 0.0
+    mode_solver: Literal["mpb", "femwell"] = "mpb"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "wavelengths", np.array(self.wavelengths, dtype="f8"))
@@ -177,20 +178,25 @@ class MultiportDevice2D:
 
     @cached_property
     def neff(self) -> float:
-        from gdsfactory.simulation.modes import find_modes_waveguide
+        match self.mode_solver:
+            case "mpb":
+                from phodex.modes.mpb import get_neff_mpb
 
-        modes = find_modes_waveguide(
-            wg_width=self.source_ports[0].width,
-            ncore=self.n_core,
-            nclad=self.n_clad,
-            wg_thickness=self.wvg_height,
-            sz=10 * self.wvg_height,
-            sy=self.monitor_size_fac * self.source_ports[0].width,
-            nmodes=self.mode,
-            resolution=self.resolution,
-            parity=self.parity,
+                get_neff = get_neff_mpb
+            case "femwell":
+                from phodex.modes.femwell import get_neff_femwell
+
+                get_neff = get_neff_femwell
+
+        return get_neff(
+            self.lcen,
+            self.source_ports[0].width,
+            self.wvg_height,
+            self.n_core,
+            self.n_clad,
+            2 * self.resolution,
+            self.polarization,
         )
-        return float(modes[self.mode].neff)
 
     @property
     def cell(self) -> mp.Vector3:
