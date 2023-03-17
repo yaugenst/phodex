@@ -7,8 +7,55 @@ from matplotlib.colors import CenteredNorm
 from matplotlib.figure import Figure
 from meep import mpb
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.interpolate import UnivariateSpline
+from scipy.optimize import root_scalar
 
 mp.verbosity.mpb = 0
+
+
+def find_k(lcen: float, k_vals: Iterable[float], freqs: Iterable[float]) -> float:
+    """Finds intersection of modal dispersion with some target wavelength."""
+    dispersion = UnivariateSpline(k_vals, freqs, s=0)
+    crossing = root_scalar(
+        lambda x: dispersion(x) - 1 / lcen,
+        method="brentq",
+        bracket=[k_vals[0], k_vals[-1]],
+    )
+    return crossing.root
+
+
+def neff_from_k(lcen: float, k_vals: Iterable[float], freqs: Iterable[float]) -> float:
+    k = find_k(lcen, k_vals, freqs)
+    return k * lcen
+
+
+def get_bands(
+    k_points: Iterable[mp.Vector3],
+    resolution: int,
+    num_bands: int,
+    geometry: Iterable[mp.GeometricObject],
+    lattice: mp.Lattice,
+    default_material: mp.Medium | None = None,
+    polarization: Literal["te", "tm"] | None = None,
+) -> dict:
+    ms = mpb.ModeSolver(
+        geometry_lattice=lattice,
+        geometry=geometry,
+        resolution=resolution,
+        k_points=k_points,
+        num_bands=num_bands,
+        default_material=default_material,
+    )
+
+    match polarization:
+        case "te":
+            ms.run_te()
+        case "tm":
+            ms.run_tm()
+        case _:
+            ms.run()
+
+    return gather_ms_results(ms, 1)
 
 
 def gather_ms_results(
