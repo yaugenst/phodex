@@ -82,6 +82,7 @@ def plot_bands(
     bands: dict[str, Iterable],
     lcen: float,
     k_vecs: Iterable[float],
+    n_core: float,
     n_clad: float,
     ax: plt.Axes | None = None,
 ) -> None:
@@ -95,13 +96,19 @@ def plot_bands(
     for (k, v), c in zip(bands.items(), colors):
         ax.plot(k_vecs, v[:, 0], c, label=k)
         ax.plot(k_vecs, v[:, 1:], c)
-    ax.plot(k_vecs, k_vecs / n_clad, "k-", lw=1)
+    ax.plot(k_vecs, k_vecs / n_core, "k-", lw=0.5)
+    ax.plot(k_vecs, k_vecs / n_clad, "k-", lw=0.5)
     ax.plot([k_vecs[0], k_vecs[-1]], [fcen, fcen], c="tab:green", ls="--", zorder=3)
     ax.fill_between(
         k_vecs, np.max(k_vecs / n_clad), k_vecs / n_clad, fc="0.8", zorder=2
     )
+    ax.fill_between(k_vecs, k_vecs / n_core, 0, fc="0.8", zorder=2)
     ax.axis([k_vecs[0], k_vecs[-1], 0, max_freq])
-    ax.text(0.4, fcen + max_freq / 50, rf"$\lambda = {lcen} \mu m$", size=12)
+    ax.text(0.35, fcen + max_freq / 50, rf"$\lambda = {lcen} \mu m$", size=12)
+    plt.text(0.7, 0.1, "core light cone", color="0.5", size=13, transform=ax.transAxes)
+    plt.text(
+        0.25, 0.9, "cladding light cone", color="0.5", size=13, transform=ax.transAxes
+    )
     ax.set_xlabel(r"$k_x$ ($\frac{2\pi}{\mu m}$)", size=13)
     ax.set_ylabel(r"frequency (300 THz)", size=13)
     ax.legend()
