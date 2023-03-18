@@ -105,9 +105,9 @@ def plot_bands(
     ax.fill_between(k_vecs, k_vecs / n_core, 0, fc="0.8", zorder=2)
     ax.axis([k_vecs[0], k_vecs[-1], 0, max_freq])
     ax.text(0.35, fcen + max_freq / 50, rf"$\lambda = {lcen} \mu m$", size=12)
-    plt.text(0.7, 0.1, "core light cone", color="0.5", size=13, transform=ax.transAxes)
+    plt.text(0.7, 0.1, "core light cone", color="0.5", size=12, transform=ax.transAxes)
     plt.text(
-        0.25, 0.9, "cladding light cone", color="0.5", size=13, transform=ax.transAxes
+        0.2, 0.9, "cladding light cone", color="0.5", size=12, transform=ax.transAxes
     )
     ax.set_xlabel(r"$k_x$ ($\frac{2\pi}{\mu m}$)", size=13)
     ax.set_ylabel(r"frequency (300 THz)", size=13)
