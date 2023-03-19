@@ -200,3 +200,44 @@ def get_neff_mpb(
     )
 
     return k[0] * lambda0
+
+
+def find_singlemode_width(
+    h: float,
+    lcen: float,
+    n_core: float,
+    n_clad: float,
+    resolution: int,
+    k_points: Iterable[mp.Vector3],
+    k_vals: Iterable[float],
+    lattice: mp.Lattice,
+    bracket: Iterable[float],
+    dw: float = 1e-4,
+) -> float:
+    resolution = int(resolution * n_core / lcen)
+
+    def objective(w):
+        fcen = 1 / lcen
+        geometry = [
+            mp.Block(
+                size=mp.Vector3(mp.inf, w + dw, h),
+                material=mp.Medium(index=n_core),
+                center=mp.Vector3(),
+            ),
+        ]
+        freqs = get_bands(
+            k_points,
+            resolution,
+            3,
+            geometry,
+            lattice,
+            mp.Medium(index=n_clad),
+            "te",
+        )["freqs"]
+        kx = find_k(lcen, k_vals, freqs[:, 1])  # crossing of second order mode
+        light_line = UnivariateSpline(k_vals, k_vals / n_clad, s=0)
+        return light_line(kx) - fcen
+
+    fit = root_scalar(objective, method="brentq", bracket=bracket, xtol=1e-3)
+
+    return fit.root
