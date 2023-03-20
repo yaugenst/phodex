@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
 import autograd.numpy as np
-import matplotlib.pyplot as plt
 import nlopt
 
-from phodex.autograd.functions import grey_closing, grey_opening
 from phodex.io import filter_stdout
 from phodex.layout.meep import MultiportDevice2D, Port
 from phodex.optim.callbacks import combine, log_epigraph, plot_epigraph
@@ -13,12 +11,12 @@ from phodex.topopt.parametrizations import sigmoid_parametrization
 
 
 def main():
-    min_feat = 0.1
+    min_feat = 0.3
     beta = 64
     wvg_width = 0.45
     resolution = 20
     wavelengths = np.linspace(1.53, 1.57, 5)
-    design_region = [3, 3]
+    design_region = [4, 4]
     polarization = "te"
 
     ports = [
@@ -39,7 +37,7 @@ def main():
         design_resolution=2 * resolution,
         design_region_extent=design_region,
         monitor_size_fac=4,
-        damping=1e-3,
+        damping=1e-2,
         mode_solver="mpb",
     )
 
@@ -57,7 +55,7 @@ def main():
         ks += 1
 
     filter_and_project = sigmoid_parametrization(
-        (p.nx, p.ny), ks, beta, filter_type="gaussian", flat=False
+        (p.nx, p.ny), ks, beta, filter_type="cone", flat=False
     )
 
     def parametrization(x):
@@ -65,8 +63,6 @@ def main():
         x = np.concatenate([x, np.fliplr(x.T)], axis=1)
         x = np.concatenate([x, np.flipud(x)], axis=0)
         x = filter_and_project(x)
-        x = grey_opening(x, np.ones((ks, ks)), "symmetric")
-        x = grey_closing(x, np.ones((ks, ks)), "symmetric")
         return x.ravel()
 
     log_cb, state_dict = log_epigraph(logscale=True)
