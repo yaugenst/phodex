@@ -158,11 +158,11 @@ class MultiportDevice2D:
 
     @property
     def min_wl(self) -> float:
-        return min(self.wavelengths) / max([self.n_core, self.n_clad])
+        return np.min(self.wavelengths) / np.max([self.n_core, self.n_clad])
 
     @property
     def max_wl(self) -> float:
-        return max(self.wavelengths) / min([self.n_core, self.n_clad])
+        return np.max(self.wavelengths) / np.min([self.n_core, self.n_clad])
 
     @property
     def core(self) -> mp.Medium:
